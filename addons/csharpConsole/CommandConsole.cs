@@ -414,7 +414,7 @@ public partial class CommandConsole : Node
 		syntaxLabel.AppendText(_params);
     }
 
-	void PrintLine(string text)
+	public void PrintLine(string text)
 	{
 		if (rich_label == null)
 		{
@@ -545,7 +545,60 @@ public partial class CommandConsole : Node
         }
     }
 
-    void GetCommandsWithAttribute()
+	private object GetInstance(Type targetType)
+	{
+		try
+		{
+			if (targetType == null)
+			{
+				throw new ArgumentNullException(nameof(targetType));
+			}
+
+			PropertyInfo targetInstance = targetType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
+
+			if (targetInstance != null && targetInstance.PropertyType == targetType)
+			{
+				return targetInstance.GetValue(null);
+			}
+
+			MethodInfo instanceMethod = targetType.GetMethod("GetInstance", BindingFlags.Public | BindingFlags.Static);
+
+			if (instanceMethod != null && instanceMethod.ReturnType == targetType)
+			{
+				return instanceMethod.Invoke(null, null);
+			}
+
+			return Activator.CreateInstance(targetType); // This assumes the type has a parameterless constructor
+
+		}
+		catch (ArgumentNullException e)
+		{
+			Console.WriteLine($"Method {targetType.Name} is net set or no instance can be found. {e.Message}");
+			throw;
+		}
+		catch (ArgumentException e)
+		{
+			Console.WriteLine($"GetInstance on {targetType.Name} has invalid arguments. {e.Message}");
+			throw;
+		}
+		catch (AmbiguousMatchException e)
+		{
+			Console.WriteLine($"More than one matching Instance in {targetType.Name} was found. {e.Message}");
+			throw;
+		}
+		catch (TargetInvocationException e)
+		{
+			Console.WriteLine($"Failed to get instance of {targetType.Name}. {e.Message}");
+			throw;
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine($"Failed to get instance of {targetType.Name}. {e.Message}");
+			throw;
+		}
+	}
+
+    internal void GetCommandsWithAttribute()
     {
         var Methods =
             Assembly.GetExecutingAssembly()
@@ -580,9 +633,11 @@ public partial class CommandConsole : Node
                     else
                     {
                         var targetType = Method.DeclaringType;
-                        var targetInstance = Activator.CreateInstance(targetType); // This assumes the type has a parameterless constructor
+
+						object targetInstance = GetInstance(targetType);
+
                         delegateInstance = Delegate.CreateDelegate(
-                            System.Linq.Expressions.Expression.GetActionType(
+                        	System.Linq.Expressions.Expression.GetActionType(
                                 Method.GetParameters().Select(p => p.ParameterType).ToArray()),
                             targetInstance,
                             Method);

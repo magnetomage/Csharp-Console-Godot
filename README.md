@@ -1,7 +1,5 @@
-> [!WARNING]
-> this project is out of date.
-
-im currencly working but you can take this project as a base.
+Forked from:
+[Csharp-Console-Godot](https://github.com/MolikoDeveloper/Csharp-Console-Godot)
 
 # Csharp-Console-Godot
 original project:
